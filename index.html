@@ -1,5 +1,3 @@
-dashboard_updated.html
-100%
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -59,7 +57,7 @@ h1{font-size:clamp(20px,2.5vw,29px);line-height:1.25;margin:3px 0 5px;font-weigh
 .kpi-foot{font-size:11px;color:var(--muted);position:relative;z-index:1}
 .kpi.teal{--tint:#e6f4f3}.kpi.green{--tint:#e7f5ed}.kpi.red{--tint:#fff0ee}.kpi.amber{--tint:#fff5e5}
 .kpi.green .kpi-value{color:var(--green)}.kpi.red .kpi-value{color:var(--red)}.kpi.amber .kpi-value{color:var(--amber)}
-.grid-main{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-bottom:16px}
+.grid-main{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
 .panel{background:white;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:0}
 .panel-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
 .panel-title{font-size:14px;font-weight:700;color:var(--navy)}
@@ -100,7 +98,7 @@ tbody tr:hover td:first-child{background:#f8fbfb}
 @keyframes spin{to{transform:rotate(360deg)}}
 .footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#8a999f;font-size:11px;padding:17px 2px}
 .hidden{display:none!important}
-@media(max-width:950px){.kpis{grid-template-columns:repeat(2,1fr)}.grid-main{grid-template-columns:1fr}}
+@media(max-width:950px){.kpis{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.topbar{padding:19px 16px}.topline{align-items:flex-start;flex-direction:column}.container{padding:17px 13px 32px}.toolbar{align-items:flex-start;flex-direction:column}.filters{width:100%}.control,.search{min-width:0;flex:1;width:100%}.kpis{gap:9px}.kpi{padding:13px}.kpi-value{font-size:25px}.panel-head,.panel-body{padding:13px}.table-tools{width:100%}.table-tools .btn{flex:1}}
 
 /* Modal Styles */
@@ -152,6 +150,7 @@ tbody tr:hover td:first-child{background:#f8fbfb}
 .modal-chart-wrap {
     height: 350px;
     position: relative;
+    width: 100%;
 }
 </style>
 </head>
@@ -202,8 +201,7 @@ tbody tr:hover td:first-child{background:#f8fbfb}
    <article class="kpi amber"><div class="kpi-label">อัตราผ่านเกณฑ์ · รอบล่าสุด</div><div class="kpi-value" id="kpiRate">—</div><div class="kpi-foot">คำนวณจากจุดที่มีผลตรวจ</div></article>
   </section>
 
-  <!-- เอา panel แนวโน้มผลตรวจตามรอบออก เปลี่ยนเป็นการจัด layout ใหม่สำหรับจุดที่เกินเกณฑ์ให้เต็มความกว้าง (หรือปล่อยเป็นคอลัมน์เดียวตามความเหมาะสม) -->
-  <section class="grid-main" style="grid-template-columns: 1fr;">
+  <section class="grid-main">
    <article class="panel">
     <div class="panel-head"><div><div class="panel-title">จุดตรวจที่เกินเกณฑ์</div><div class="panel-desc" id="alertCaption">แสดงผลของรอบล่าสุด</div></div><span class="tag tag-danger" id="alertCount">0 จุด</span></div>
     <div class="panel-body"><div class="alert-list" id="alertList"></div></div>
@@ -235,7 +233,6 @@ tbody tr:hover td:first-child{background:#f8fbfb}
 </div>
 
 <script>
-/* การเชื่อมต่อเดิม: ใช้ Spreadsheet ID และชื่อชีตเดิม */
 const sheetId = "1-soxAJSeGzMUt7m-oaELwV24InbvpsTZ0-0nYcMQb1s";
 const sheetName = "ชีต1";
 const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
@@ -391,7 +388,6 @@ function openChart(rowIndex) {
     const bactData = ps.map(p => getValue(row, p, 'bact'));
     const fungiData = ps.map(p => getValue(row, p, 'fungi'));
     
-    // หาค่า max สำหรับกำหนดแกน Y ให้ครอบคลุมเส้นเกณฑ์ 500
     const maxValInRow = Math.max(
         ...bactData.filter(v => v !== null), 
         ...fungiData.filter(v => v !== null), 
@@ -419,7 +415,7 @@ function openChart(rowIndex) {
                     pointHoverRadius: 6,
                     tension: 0.3,
                     fill: false,
-                    spanGaps: true // เชื่อมเส้นกรณีมีค่า null คั่น
+                    spanGaps: true
                 },
                 {
                     label: 'เชื้อรา',
@@ -471,37 +467,35 @@ function openChart(rowIndex) {
                     max: maxY,
                     ticks: { font: { family: 'Sarabun' } }
                 }
-            },
-            // เพิ่มเส้นประเกณฑ์มาตรฐานที่ 500 cfu โดยวาดในโหมด plugin ของ chartjs (แบบกำหนดเอง)
-            plugins: [{
-                id: 'horizontalLinePlugin',
-                afterDraw: function(chart) {
-                    const ctxPlugin = chart.ctx;
-                    const yAxis = chart.scales.y;
-                    const xAxis = chart.scales.x;
-                    const yPixel = yAxis.getPixelForValue(LIMIT);
-                    
-                    // ตรวจสอบว่าเส้นอยู่ในพื้นที่กราฟหรือไม่
-                    if (yPixel > yAxis.bottom || yPixel < yAxis.top) return;
+            }
+        },
+        // ปรับแก้ตำแหน่ง Plugins สำหรับเส้น Threshold
+        plugins: [{
+            id: 'horizontalLinePlugin',
+            afterDraw: function(chart) {
+                const ctxPlugin = chart.ctx;
+                const yAxis = chart.scales.y;
+                const xAxis = chart.scales.x;
+                const yPixel = yAxis.getPixelForValue(LIMIT);
+                
+                if (yPixel > yAxis.bottom || yPixel < yAxis.top) return;
 
-                    ctxPlugin.save();
-                    ctxPlugin.beginPath();
-                    ctxPlugin.moveTo(xAxis.left, yPixel);
-                    ctxPlugin.lineTo(xAxis.right, yPixel);
-                    ctxPlugin.lineWidth = 2;
-                    ctxPlugin.strokeStyle = 'rgba(200, 50, 50, 0.7)'; // สีแดงโปร่งแสง
-                    ctxPlugin.setLineDash([5, 5]); // เส้นประ
-                    ctxPlugin.stroke();
-                    
-                    // เพิ่มข้อความกำกับ
-                    ctxPlugin.fillStyle = 'rgba(200, 50, 50, 1)';
-                    ctxPlugin.font = "12px Sarabun";
-                    ctxPlugin.fillText(`เกณฑ์มาตรฐาน (${LIMIT} CFU)`, xAxis.right - 130, yPixel - 8);
-                    
-                    ctxPlugin.restore();
-                }
-            }]
-        }
+                ctxPlugin.save();
+                ctxPlugin.beginPath();
+                ctxPlugin.moveTo(xAxis.left, yPixel);
+                ctxPlugin.lineTo(xAxis.right, yPixel);
+                ctxPlugin.lineWidth = 2;
+                ctxPlugin.strokeStyle = 'rgba(200, 50, 50, 0.7)';
+                ctxPlugin.setLineDash([5, 5]);
+                ctxPlugin.stroke();
+                
+                ctxPlugin.fillStyle = 'rgba(200, 50, 50, 1)';
+                ctxPlugin.font = "12px Sarabun";
+                ctxPlugin.fillText(`เกณฑ์มาตรฐาน (${LIMIT} CFU)`, xAxis.right - 130, yPixel - 8);
+                
+                ctxPlugin.restore();
+            }
+        }]
     });
 
     $('chartModal').classList.add('active');
@@ -510,7 +504,6 @@ function openChart(rowIndex) {
 $('closeModal').addEventListener('click', () => {
     $('chartModal').classList.remove('active');
 });
-// ปิด modal เมื่อคลิกพื้นที่ว่างข้างนอก
 $('chartModal').addEventListener('click', (e) => {
     if(e.target === $('chartModal')) {
         $('chartModal').classList.remove('active');
@@ -526,7 +519,7 @@ async function loadData() {
   const data=(results.data||[]).filter(row=>Object.values(row).some(v=>String(v??'').trim()!==''));
   const fields=results.meta?.fields||[];
   if(results.errors?.length && !data.length){showError('อ่านข้อมูลจาก Google Sheets ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์การเข้าถึงชีตและลองใหม่');return;}
-  if(!fields.length || fields.length<2){showError('ไม่พบหัวคอลัมน์ตามโครงสร้างที่คาดไว้ กรุณาตรวจสอบแถวหัวตารางในชีต1');return;}
+  if(!fields.length || fields.length<2){showError('ไม่พบหัวคอลัมน์ตามโครงสร้างที่คาดไว้');return;}
   headers=fields; rawRows=data; discoverColumns(headers);
   if(!periods.length){showError('ไม่พบคอลัมน์ผลตรวจที่มีชื่อขึ้นต้นด้วย “แบคทีเรีย” หรือ “เชื้อรา” และอยู่ในปี 2567 เป็นต้นไป');return;}
   populateYears();
@@ -537,29 +530,32 @@ async function loadData() {
   $('refreshBtn').disabled=false; $('refreshBtn').textContent='↻ รีเฟรชข้อมูล';
  },error:err=>showError('เชื่อมต่อ Google Sheets ไม่สำเร็จ: '+(err?.message||'โปรดลองอีกครั้ง'))});
 }
+
 function populateYears(){
  const select=$('yearFilter'), previous=select.value;
  const years=[...new Set(periods.map(periodYear).filter(Boolean))].sort((a,b)=>a-b);
  select.innerHTML='<option value="all">ทุกปี (ตั้งแต่ 2567)</option>'+years.map(y=>`<option value="${y}">พ.ศ. ${y}</option>`).join('');
  if(years.map(String).includes(previous)) select.value=previous;
 }
+
 function showError(message){
  $('loading').classList.add('hidden'); $('dashboard').classList.add('hidden');
  $('error').textContent=message; $('error').classList.remove('hidden');
  $('connectionText').textContent='ไม่สามารถเชื่อมต่อได้';
  $('refreshBtn').disabled=false; $('refreshBtn').textContent='↻ ลองอีกครั้ง';
 }
+
 function exportCsv(){
  if(!rawRows.length)return;
  const rows=currentRows(), ps=selectedPeriods();
  const output=[['พื้นที่ / จุดเก็บตัวอย่าง',...ps.flatMap(p=>[`${p} แบคทีเรีย`,`${p} เชื้อรา`])]];
  rows.forEach(row=>output.push([row[headers[0]],...ps.flatMap(p=>[getValue(row,p,'bact')??'',getValue(row,p,'fungi')??''])]));
- const csv='﻿'+output.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('
-');
+ const csv = '\uFEFF' + output.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download='รายงานเฝ้าระวังคุณภาพอากาศ.csv';a.click();URL.revokeObjectURL(url);
 }
+
 $('refreshBtn').addEventListener('click',loadData);
 $('yearFilter').addEventListener('change',render);
 $('searchInput').addEventListener('input',render);
@@ -569,4 +565,3 @@ setInterval(loadData,REFRESH_INTERVAL);
 </script>
 </body>
 </html>
-กำลังแสดง dashboard_updated.html
