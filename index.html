@@ -152,6 +152,78 @@ tbody tr:hover td:first-child{background:#f8fbfb}
     position: relative;
     width: 100%;
 }
+
+/* เพิ่มเติม: สไตล์สำหรับกล่องข้อเสนอแนะและฟอร์มกรอกข้อมูล */
+.suggestion-box {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #fdfaf4;
+    border-left: 3px solid #d29a42;
+    border-radius: 6px;
+    font-size: 11.5px;
+    color: var(--navy);
+    line-height: 1.5;
+}
+.entry-grid-wrap {
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-top: 15px;
+}
+.entry-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.entry-table th {
+    background: #f4f7f8;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    font-size: 12px;
+}
+.entry-table td {
+    padding: 8px;
+    border-bottom: 1px solid #edf1f2;
+}
+.entry-input {
+    width: 80px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+}
+.entry-input:focus {
+    border-color: var(--teal);
+    outline: none;
+}
+.period-select-wrap {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+.period-select-wrap select, .period-select-wrap input {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+.btn-primary {
+    background: var(--teal);
+    color: white;
+}
+.btn-primary:hover {
+    background: #066a6d;
+}
+.btn-primary:disabled {
+    background: #a3c4c5;
+    cursor: not-allowed;
+}
+.form-info {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
 </style>
 </head>
 <body>
@@ -168,7 +240,8 @@ tbody tr:hover td:first-child{background:#f8fbfb}
   </div>
   <div class="top-actions">
    <span class="status-pill"><i class="status-dot"></i><span id="connectionText">กำลังเชื่อมต่อข้อมูล</span></span>
-   <button class="btn btn-ghost" id="refreshBtn">↻ รีเฟรชข้อมูล</button>
+   <button class="btn btn-primary" id="openEntryBtn">📝 บันทึกผลรอบใหม่</button>
+   <button class="btn btn-ghost" id="refreshBtn">↻ รีเฟรช</button>
    <button class="btn btn-light" id="exportBtn">↓ ส่งออก CSV</button>
   </div>
  </div>
@@ -232,7 +305,63 @@ tbody tr:hover td:first-child{background:#f8fbfb}
     </div>
 </div>
 
+<!-- Modal สำหรับกรอกข้อมูลแบบ Grid -->
+<div class="modal-overlay" id="entryModal">
+    <div class="modal-content" style="max-width: 900px;">
+        <button class="modal-close" id="closeEntryModal">&times;</button>
+        <div class="modal-title">บันทึกผลการตรวจวิเคราะห์ (Batch Entry)</div>
+        <div class="modal-subtitle">ข้อมูลจะถูกเพิ่มเป็นคอลัมน์ใหม่ใน Google Sheets โดยอัตโนมัติ</div>
+        
+        <div class="period-select-wrap">
+            <div>
+                <label style="font-size: 12px; font-weight: bold; color: var(--navy);">รอบเดือน:</label>
+                <select id="entryMonth">
+                    <option value="มค">มกราคม (มค)</option>
+                    <option value="กพ">กุมภาพันธ์ (กพ)</option>
+                    <option value="มีค">มีนาคม (มีค)</option>
+                    <option value="เมย">เมษายน (เมย)</option>
+                    <option value="พค">พฤษภาคม (พค)</option>
+                    <option value="มิย">มิถุนายน (มิย)</option>
+                    <option value="กค">กรกฎาคม (กค)</option>
+                    <option value="สค">สิงหาคม (สค)</option>
+                    <option value="กย">กันยายน (กย)</option>
+                    <option value="ตค">ตุลาคม (ตค)</option>
+                    <option value="พย">พฤศจิกายน (พย)</option>
+                    <option value="ธค">ธันวาคม (ธค)</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size: 12px; font-weight: bold; color: var(--navy);">ปี (พ.ศ. ย่อ 2 หลัก):</label>
+                <input type="number" id="entryYear" placeholder="เช่น 68" min="67" max="99" style="width: 100px;">
+            </div>
+        </div>
+        <div class="form-info">💡 <b>คำแนะนำ:</b> กรอกตัวเลข CFU, หรือพิมพ์ <b>NG</b> สำหรับ No Growth (ถ้าไม่ตรวจจุดนั้นให้เว้นว่างไว้)</div>
+        
+        <div class="entry-grid-wrap">
+            <table class="entry-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">พื้นที่ / จุดตรวจ</th>
+                        <th>แบคทีเรีย (CFU)</th>
+                        <th>เชื้อรา (CFU)</th>
+                    </tr>
+                </thead>
+                <tbody id="entryGridBody">
+                    <!-- สร้างแถวอัตโนมัติผ่าน JS -->
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top: 20px; text-align: right;">
+            <span id="entryStatus" style="font-size: 12px; color: var(--muted); margin-right: 15px;"></span>
+            <button class="btn btn-primary" id="saveEntryBtn" style="padding: 10px 24px; font-size: 14px;">💾 บันทึกลงฐานข้อมูล</button>
+        </div>
+    </div>
+</div>
+
 <script>
+// >>>>>>>>>>>>>>>>> ตั้งค่า URL ของ APPS SCRIPT ตรงนี้ <<<<<<<<<<<<<<<<<<<<
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxQ2s6qZBvx9n5mIS3TyHsTp6vMbCvbo1S2D86tMfaL_evlHmUj-OAjjclPcSo0FxH42w/exec";
+
 const sheetId = "1-soxAJSeGzMUt7m-oaELwV24InbvpsTZ0-0nYcMQb1s";
 const sheetName = "ชีต1";
 /* แก้ไข URL ดึงข้อมูลเป็น export ดิบ เพื่อป้องกันปัญหา Google Sheets เดาชนิดข้อมูลผิดพลาดจนจุดตรวจหาย */
@@ -329,6 +458,20 @@ function evaluate(row, period) {
  const fungiFail = fungi !== null && fungi > LIMIT;
  return {bact,fungi,hasData,bactFail,fungiFail,fail:bactFail||fungiFail};
 }
+
+// ฟังก์ชันวิเคราะห์สาเหตุเบื้องต้น (Root Cause Predictor)
+function analyzeRootCause(bact, fungi, limit = 500) {
+    let causes = [];
+    if (bact > limit && fungi <= limit) {
+        causes.push("🦠 <b>แบคทีเรียสูง:</b> มักเกิดจากกิจกรรมของมนุษย์ ความหนาแน่นของผู้ปฏิบัติงาน หรือการทำความสะอาด (Disinfection) พื้นผิวสัมผัสไม่เพียงพอ");
+    } else if (fungi > limit && (bact === null || bact <= limit)) {
+        causes.push("🍄 <b>เชื้อราสูง:</b> สัมพันธ์กับความชื้นสะสม ท่อน้ำทิ้ง ระบบปรับอากาศ (HVAC) อับชื้น หรือแผ่นกรองอากาศ (Filter) อุดตัน/เสื่อมสภาพ");
+    } else if (bact > limit && fungi > limit) {
+        causes.push("⚠️ <b>สูงทั้ง 2 ชนิด:</b> บ่งชี้ปัญหาการระบายอากาศ (Ventilation) ไม่หมุนเวียน หรือสุขาภิบาลพื้นที่ล้มเหลว ควรตรวจสอบทิศทางลมเย็นและทำ Big Cleaning ด่วน");
+    }
+    return causes.join('<br>');
+}
+
 function render() {
  const rows=currentRows(), ps=selectedPeriods(), latest=getLatestPeriod(ps);
  $('periodCaption').textContent = latest ? `รอบข้อมูลล่าสุดที่มีผลตรวจ: ${latest}` : 'ไม่พบข้อมูลในช่วงเวลาที่เลือก';
@@ -356,7 +499,8 @@ function render() {
   const parts=[];
   if(result.bactFail) parts.push(`แบคทีเรีย <b>${displayCfu(result.bact)}</b>`);
   if(result.fungiFail) parts.push(`เชื้อรา <b>${displayCfu(result.fungi)}</b>`);
-  return `<div class="alert-item"><div class="alert-top"><span class="alert-place">${loc}</span><span class="tag tag-danger">เกินเกณฑ์</span></div><div class="alert-values">${parts.join('<span>·</span>')}</div></div>`;
+  const rootCauseHtml = analyzeRootCause(result.bact, result.fungi, LIMIT);
+  return `<div class="alert-item"><div class="alert-top"><span class="alert-place">${loc}</span><span class="tag tag-danger">เกินเกณฑ์</span></div><div class="alert-values">${parts.join('<span>·</span>')}</div><div class="suggestion-box">${rootCauseHtml}</div></div>`;
  }).join('') : '<div class="empty">✓ ไม่พบจุดตรวจที่เกินเกณฑ์ในรอบล่าสุด</div>';
  renderMatrix(rows,ps);
 }
@@ -501,6 +645,131 @@ function openChart(rowIndex) {
 
     $('chartModal').classList.add('active');
 }
+
+// -----------------------------------------------------------
+// ระบบ Data Entry แบบ Batch Grid
+// -----------------------------------------------------------
+$('openEntryBtn').addEventListener('click', () => {
+    // กำหนดปีปัจจุบันเป็นค่าเริ่มต้น (พ.ศ. 2 หลัก)
+    const currentYear = new Date().getFullYear() + 543;
+    $('entryYear').value = String(currentYear).slice(-2);
+    
+    const rows = rawRows; // ใช้พื้นที่ทั้งหมดที่มีในฐานข้อมูล
+    let gridHtml = '';
+    
+    // ดึงจุดตรวจที่ไม่ซ้ำกัน
+    const uniqueLocations = [...new Set(rows.map(r => r[headers[0]]).filter(Boolean))];
+    
+    uniqueLocations.forEach((loc, index) => {
+        gridHtml += `
+            <tr>
+                <td style="font-weight: 500; color: var(--navy);"><input type="hidden" class="entry-loc" value="${escapeHTML(loc)}">${escapeHTML(loc)}</td>
+                <td style="text-align: center;"><input type="text" class="entry-input entry-bact" placeholder="-"></td>
+                <td style="text-align: center;"><input type="text" class="entry-input entry-fungi" placeholder="-"></td>
+            </tr>
+        `;
+    });
+    
+    // เผื่อแถวว่างสำหรับพิมพ์จุดตรวจใหม่
+    for(let i = 1; i <= 3; i++) {
+        gridHtml += `
+            <tr>
+                <td><input type="text" class="entry-loc-new" placeholder="[+ เพิ่มจุดตรวจใหม่]" style="width:100%; padding:6px; border:1px dashed #ccc; border-radius:4px;"></td>
+                <td style="text-align: center;"><input type="text" class="entry-input entry-bact" placeholder="-"></td>
+                <td style="text-align: center;"><input type="text" class="entry-input entry-fungi" placeholder="-"></td>
+            </tr>
+        `;
+    }
+
+    $('entryGridBody').innerHTML = gridHtml;
+    $('entryStatus').textContent = '';
+    $('saveEntryBtn').disabled = false;
+    $('entryModal').classList.add('active');
+});
+
+$('closeEntryModal').addEventListener('click', () => {
+    $('entryModal').classList.remove('active');
+});
+
+$('saveEntryBtn').addEventListener('click', async () => {
+    const month = $('entryMonth').value;
+    const year = $('entryYear').value.trim();
+    
+    if (!year || year.length !== 2) {
+        alert("กรุณาระบุ ปี พ.ศ. เป็นตัวเลข 2 หลัก (เช่น 68)");
+        return;
+    }
+
+    if (GAS_URL === "https://script.google.com/macros/s/AKfycbxQ2s6qZBvx9n5mIS3TyHsTp6vMbCvbo1S2D86tMfaL_evlHmUj-OAjjclPcSo0FxH42w/exec") {
+        alert("ยังไม่ได้ตั้งค่า GAS URL กรุณาตั้งค่าในโค้ดก่อนใช้งานฟังก์ชันนี้");
+        return;
+    }
+
+    $('saveEntryBtn').disabled = true;
+    $('entryStatus').innerHTML = '<span class="spinner" style="display:inline-block; width:12px; height:12px; border-width:2px; margin:0 5px 0 0;"></span>กำลังบันทึกข้อมูล...';
+
+    const trs = $('entryGridBody').querySelectorAll('tr');
+    let dataPayload = [];
+
+    trs.forEach(tr => {
+        let loc = "";
+        const hiddenLoc = tr.querySelector('.entry-loc');
+        const inputLoc = tr.querySelector('.entry-loc-new');
+        
+        if (hiddenLoc) loc = hiddenLoc.value;
+        else if (inputLoc) loc = inputLoc.value.trim();
+        
+        if (!loc) return; // ข้ามแถวที่ไม่มีชื่อสถานที่
+
+        let bact = tr.querySelector('.entry-bact').value.trim();
+        let fungi = tr.querySelector('.entry-fungi').value.trim();
+        
+        // แปลงคำว่า ng, NG ให้เป็น No Growth ตามมาตรฐานเดิม
+        if (bact.toLowerCase() === 'ng') bact = 'No Growth';
+        if (fungi.toLowerCase() === 'ng') fungi = 'No Growth';
+
+        // ส่งเฉพาะแถวที่มีการกรอกข้อมูลอย่างใดอย่างหนึ่ง
+        if (bact !== "" || fungi !== "") {
+            dataPayload.push({ location: loc, bact: bact, fungi: fungi });
+        }
+    });
+
+    if (dataPayload.length === 0) {
+        $('entryStatus').textContent = 'ไม่มีข้อมูลให้บันทึก';
+        $('saveEntryBtn').disabled = false;
+        return;
+    }
+
+    const payload = {
+        month: month,
+        year: year,
+        data: dataPayload
+    };
+
+    try {
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // กัน CORS Preflight
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            $('entryStatus').innerHTML = '<span style="color:var(--green)">✓ บันทึกสำเร็จ! กำลังรีเฟรช...</span>';
+            setTimeout(() => {
+                $('entryModal').classList.remove('active');
+                loadData(); // ดึงข้อมูลใหม่มาโชว์
+            }, 1500);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        $('entryStatus').innerHTML = `<span style="color:var(--red)">❌ เกิดข้อผิดพลาด: ${error.message}</span>`;
+        $('saveEntryBtn').disabled = false;
+    }
+});
+// -----------------------------------------------------------
 
 $('closeModal').addEventListener('click', () => {
     $('chartModal').classList.remove('active');
