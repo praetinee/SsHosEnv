@@ -3,151 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Quality Monitoring Dashboard</title>
+    <title>Indoor Air Quality Monitoring - Hospital Dashboard</title>
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- Google Fonts: Sarabun -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- PapaParse -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
     <style>
+        :root {
+            --primary-blue: #0f4c81;
+            --danger-red: #d32f2f;
+            --safe-green: #2e7d32;
+            --bg-light: #f4f6f8;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
         body {
             font-family: 'Sarabun', sans-serif;
-            background-color: #f5f7fa;
+            background-color: var(--bg-light);
             color: #333;
         }
-        .navbar-brand {
-            font-weight: 600;
-            letter-spacing: 0.5px;
+        .header-bar {
+            background-color: #ffffff;
+            border-bottom: 2px solid var(--primary-blue);
+            padding: 15px 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            margin-bottom: 24px;
         }
-        .dashboard-header {
-            margin-bottom: 1.5rem;
-            color: #2c3e50;
+        .header-title {
+            font-size: 1.25rem;
             font-weight: 600;
+            color: var(--primary-blue);
+            margin: 0;
         }
-        .kpi-card {
+        .card {
             border: none;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 24px;
+            background: #ffffff;
         }
-        .kpi-card:hover {
-            transform: translateY(-3px);
+        .card-header-custom {
+            background: transparent;
+            border-bottom: 1px solid #edf2f7;
+            padding: 16px 20px;
+            font-weight: 600;
+            color: #2d3748;
         }
         .kpi-title {
-            font-size: 0.9rem;
-            color: #6c757d;
+            font-size: 0.875rem;
+            color: #718096;
             font-weight: 500;
-            text-transform: uppercase;
         }
         .kpi-value {
             font-size: 2rem;
-            font-weight: 600;
-            margin-top: 10px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-top: 8px;
         }
-        .content-card {
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            padding: 20px;
-            margin-bottom: 20px;
+        .kpi-alert { color: var(--danger-red); }
+        .kpi-safe { color: var(--primary-blue); }
+        
+        .table-responsive {
+            padding: 0 20px 20px 20px;
         }
-        .table-custom th {
-            background-color: #f8f9fa;
-            color: #495057;
+        .table {
+            margin-bottom: 0;
+            font-size: 0.95rem;
+        }
+        .table thead th {
+            background-color: #f8fafc;
+            color: #4a5568;
             font-weight: 600;
-            border-bottom: 2px solid #dee2e6;
-            text-align: center;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .table td {
             vertical-align: middle;
+            border-bottom: 1px solid #edf2f7;
         }
-        .table-custom td {
-            text-align: center;
-            vertical-align: middle;
-        }
-        .table-custom tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-        .badge-safe {
-            background-color: #d1e7dd;
-            color: #0f5132;
-            font-weight: 500;
-            padding: 0.5em 0.8em;
-        }
-        .badge-danger-custom {
-            background-color: #f8d7da;
-            color: #842029;
+        .val-danger {
+            color: var(--danger-red);
             font-weight: 600;
-            padding: 0.5em 0.8em;
+            background-color: #fff5f5;
         }
-        .badge-nodata {
-            background-color: #e9ecef;
-            color: #6c757d;
-            font-weight: 400;
+        .val-safe {
+            color: #4a5568;
         }
+        .val-nogrowth {
+            color: var(--safe-green);
+            font-size: 0.85rem;
+        }
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            background-color: #cbd5e0;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .dot-danger { background-color: var(--danger-red); }
+        .dot-safe { background-color: var(--safe-green); }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid px-4">
-        <span class="navbar-brand">Indoor Air Quality Monitoring</span>
-    </div>
-</nav>
+<div class="header-bar d-flex justify-content-between align-items-center">
+    <h1 class="header-title">รายงานเฝ้าระวังคุณภาพอากาศภายในอาคาร (Indoor Air Quality)</h1>
+    <span class="text-muted" style="font-size: 0.9rem;" id="last-updated">ดึงข้อมูลล่าสุด: กำลังโหลด...</span>
+</div>
 
-<div class="container-fluid px-4 py-4">
-    <h4 class="dashboard-header">รายงานผลการตรวจเชื้อราและแบคทีเรียในอากาศ</h4>
+<div class="container-fluid px-4">
     
-    <div id="loading" class="text-center my-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">กำลังซิงค์ข้อมูลจากฐานข้อมูล...</p>
+    <!-- Loading State -->
+    <div id="loading" class="text-center py-5">
+        <div class="spinner-border" style="color: var(--primary-blue);" role="status"></div>
+        <p class="mt-3 text-muted">กำลังประมวลผลข้อมูลจากระบบ...</p>
     </div>
 
     <div id="dashboard-content" style="display: none;">
-        <!-- KPI Cards -->
-        <div class="row mb-4">
-            <div class="col-md-4 mb-3">
-                <div class="card kpi-card">
+        
+        <!-- Executive Summary KPIs -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card">
                     <div class="card-body">
-                        <div class="kpi-title">จุดตรวจทั้งหมด</div>
-                        <div class="kpi-value text-primary" id="kpi-total">0</div>
+                        <div class="kpi-title">จำนวนจุดตรวจทั้งหมด</div>
+                        <div class="kpi-value kpi-safe" id="kpi-total-points">0</div>
+                        <div class="text-muted mt-2" style="font-size: 0.8rem;">พื้นที่ภายในโรงพยาบาล</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card kpi-card">
+            <div class="col-md-3">
+                <div class="card">
                     <div class="card-body">
-                        <div class="kpi-title">จุดตรวจที่ผ่านเกณฑ์ (ทุกรอบตรวจ)</div>
-                        <div class="kpi-value text-success" id="kpi-pass">0</div>
+                        <div class="kpi-title">รอบการตรวจล่าสุด</div>
+                        <div class="kpi-value" style="color: #2d3748; font-size: 1.5rem; margin-top: 15px;" id="kpi-latest-period">-</div>
+                        <div class="text-muted mt-2" style="font-size: 0.8rem;">ข้อมูลการตรวจอัปเดตล่าสุด</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card kpi-card border-bottom border-danger border-3">
+            <div class="col-md-6">
+                <div class="card" style="border-left: 4px solid var(--danger-red);">
                     <div class="card-body">
-                        <div class="kpi-title">จุดตรวจที่ต้องเฝ้าระวัง (> 500 cfu)</div>
-                        <div class="kpi-value text-danger" id="kpi-fail">0</div>
+                        <div class="kpi-title text-danger fw-bold">พื้นที่ต้องเฝ้าระวัง (รอบตรวจล่าสุดเกิน 500 cfu)</div>
+                        <div class="d-flex align-items-baseline">
+                            <div class="kpi-value kpi-alert" id="kpi-risk-points">0</div>
+                            <span class="ms-2 text-muted">จุดตรวจ</span>
+                        </div>
+                        <div class="text-muted mt-2" style="font-size: 0.8rem;">*จำเป็นต้องตรวจสอบระบบระบายอากาศหรือทำความสะอาดพื้นที่</div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Charts Section -->
         <div class="row">
-            <!-- Chart Section -->
-            <div class="col-xl-12 mb-4">
-                <div class="content-card">
-                    <h6 class="mb-3 font-weight-bold">กราฟเปรียบเทียบผลการตรวจล่าสุด</h6>
-                    <canvas id="latestChart" height="80"></canvas>
+            <!-- Trend Chart -->
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header-custom">แนวโน้มปริมาณเชื้อสะสมเฉลี่ย แยกตามรอบการตรวจ (Trend Analysis)</div>
+                    <div class="card-body">
+                        <canvas id="trendChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            <!-- Alert Chart -->
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header-custom">5 อันดับพื้นที่เฝ้าระวังสูงสุด (รอบตรวจล่าสุด)</div>
+                    <div class="card-body">
+                        <canvas id="riskChart" height="220"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Data Table Section -->
-        <div class="row">
+        <!-- Data Table -->
+        <div class="row mt-4">
             <div class="col-12">
-                <div class="content-card">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="font-weight-bold mb-0">ข้อมูลผลการตรวจย้อนหลัง (เกณฑ์ < 500 cfu/ชนิด)</h6>
+                <div class="card">
+                    <div class="card-header-custom d-flex justify-content-between align-items-center">
+                        <span>ผลการตรวจวิเคราะห์ทางจุลชีววิทยาของอากาศ (cfu/ชนิด)</span>
+                        <span class="badge bg-light text-dark border">เกณฑ์มาตรฐาน: &le; 500 cfu</span>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-custom">
+                    <div class="table-responsive mt-3">
+                        <table class="table table-hover">
                             <thead id="tableHead"></thead>
                             <tbody id="tableBody"></tbody>
                         </table>
@@ -155,6 +199,7 @@
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -162,31 +207,40 @@
     const sheetId = "1-soxAJSeGzMUt7m-oaELwV24InbvpsTZ0-0nYcMQb1s";
     const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=ชีต1`;
 
-    function parseValue(value) {
+    // ตั้งค่าเวลาอัปเดตล่าสุด
+    const now = new Date();
+    document.getElementById('last-updated').innerText = `ดึงข้อมูลล่าสุด: ${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`;
+
+    // ฟังก์ชันแปลงค่า Text เป็นตัวเลขเพื่อคำนวณ
+    function parseCfuValue(value) {
         if (!value || value.trim() === '' || value.trim().toLowerCase() === 'nan') return null;
-        let lower = value.trim().toLowerCase();
-        if (lower === 'no growth') return 0;
-        let num = parseFloat(value.replace(/,/g, ''));
+        let strVal = value.trim().toLowerCase();
+        if (strVal === 'no growth') return 0;
+        let num = parseFloat(strVal.replace(/,/g, ''));
         return isNaN(num) ? null : num;
     }
 
-    function getBadgeHtml(value) {
+    // ฟังก์ชันจัด Format การแสดงผลในตาราง
+    function formatCell(value) {
         if (!value || value.trim() === '' || value.trim().toLowerCase() === 'nan') {
-            return `<span class="badge badge-nodata">-</span>`;
+            return `<td class="text-muted text-center">-</td>`;
         }
-        let lower = value.trim().toLowerCase();
+        let strVal = value.trim();
+        let lower = strVal.toLowerCase();
+        
         if (lower === 'no growth') {
-            return `<span class="badge badge-safe">No Growth</span>`;
+            return `<td class="text-center val-nogrowth"><span class="status-dot dot-safe"></span>No Growth</td>`;
         }
-        let num = parseFloat(value.replace(/,/g, ''));
+
+        let num = parseFloat(strVal.replace(/,/g, ''));
         if (!isNaN(num)) {
             if (num > 500) {
-                return `<span class="badge badge-danger-custom">${num.toLocaleString()} cfu</span>`;
+                return `<td class="text-center val-danger"><span class="status-dot dot-danger"></span>${num.toLocaleString()}</td>`;
             } else {
-                return `<span class="badge badge-safe">${num.toLocaleString()} cfu</span>`;
+                return `<td class="text-center val-safe">${num.toLocaleString()}</td>`;
             }
         }
-        return `<span>${value}</span>`;
+        return `<td class="text-center">${strVal}</td>`;
     }
 
     Papa.parse(csvUrl, {
@@ -198,73 +252,127 @@
             
             if (!data || data.length === 0) return;
 
-            let totalPoints = 0;
-            let failPoints = 0;
-            let theadHtml = '<tr>';
+            // 1. วิเคราะห์โครงสร้างคอลัมน์ (สกัดชื่อรอบการตรวจ)
+            let periods = [];
+            let bacteriaCols = [];
+            let fungiCols = [];
             
-            headers.forEach(h => { theadHtml += `<th>${h}</th>`; });
-            theadHtml += '</tr>';
-            document.getElementById('tableHead').innerHTML = theadHtml;
-
-            let tbodyHtml = '';
-            let chartLabels = [];
-            let chartDataBact = [];
-            let chartDataFungi = [];
-            
-            // ใช้ 2 คอลัมน์สุดท้ายเป็นข้อมูลล่าสุดสำหรับกราฟ
-            let latestBactHeader = headers[headers.length - 2];
-            let latestFungiHeader = headers[headers.length - 1];
-
-            data.forEach(row => {
-                if(!row[headers[0]]) return; // ข้ามแถวว่าง
-                
-                totalPoints++;
-                let rowHasDanger = false;
-                tbodyHtml += '<tr>';
-                
-                headers.forEach((header, index) => {
-                    if (index === 0) {
-                        tbodyHtml += `<td class="text-start"><strong>${row[header]}</strong></td>`;
-                        chartLabels.push(row[header]);
-                    } else {
-                        let val = parseValue(row[header]);
-                        if (val !== null && val > 500) rowHasDanger = true;
-                        tbodyHtml += `<td>${getBadgeHtml(row[header])}</td>`;
-                    }
-                });
-                
-                if (rowHasDanger) failPoints++;
-                tbodyHtml += '</tr>';
-
-                // เตรียมข้อมูลสำหรับกราฟ
-                chartDataBact.push(parseValue(row[latestBactHeader]) || 0);
-                chartDataFungi.push(parseValue(row[latestFungiHeader]) || 0);
+            headers.forEach(h => {
+                if (h.includes('แบคทีเรีย')) {
+                    let period = h.replace('แบคทีเรีย', '').trim();
+                    periods.push(period);
+                    bacteriaCols.push(h);
+                } else if (h.includes('เชื้อรา')) {
+                    fungiCols.push(h);
+                }
             });
 
+            const latestPeriod = periods[periods.length - 1];
+            const latestBactCol = bacteriaCols[bacteriaCols.length - 1];
+            const latestFungiCol = fungiCols[fungiCols.length - 1];
+
+            document.getElementById('kpi-latest-period').innerText = latestPeriod || '-';
+
+            // 2. ประมวลผลข้อมูล
+            let tbodyHtml = '';
+            let totalPoints = 0;
+            let riskPointsCount = 0;
+            
+            // สำหรับกราฟ Trend (เก็บผลรวมเพื่อหาค่าเฉลี่ย)
+            let trendDataBact = new Array(periods.length).fill(0);
+            let trendDataFungi = new Array(periods.length).fill(0);
+            let validCountsBact = new Array(periods.length).fill(0);
+            let validCountsFungi = new Array(periods.length).fill(0);
+
+            // สำหรับกราฟ Risk (Top 5)
+            let latestRiskData = [];
+
+            data.forEach(row => {
+                const location = row[headers[0]];
+                if (!location) return; // ข้ามแถวว่าง
+                
+                totalPoints++;
+                let htmlRow = `<tr><td><strong>${location}</strong></td>`;
+                let isRiskLatest = false;
+                let latestTotalCfu = 0;
+
+                // วนลูปข้อมูลแต่ละคอลัมน์เพื่อใส่ตาราง
+                for (let i = 1; i < headers.length; i++) {
+                    htmlRow += formatCell(row[headers[i]]);
+                }
+                htmlRow += '</tr>';
+                tbodyHtml += htmlRow;
+
+                // คำนวณ Trend
+                periods.forEach((p, idx) => {
+                    let bVal = parseCfuValue(row[bacteriaCols[idx]]);
+                    let fVal = parseCfuValue(row[fungiCols[idx]]);
+                    
+                    if (bVal !== null) { trendDataBact[idx] += bVal; validCountsBact[idx]++; }
+                    if (fVal !== null) { trendDataFungi[idx] += fVal; validCountsFungi[idx]++; }
+                });
+
+                // คำนวณ Risk (ตรวจสอบรอบล่าสุด)
+                let lBact = parseCfuValue(row[latestBactCol]);
+                let lFungi = parseCfuValue(row[latestFungiCol]);
+                
+                if ((lBact !== null && lBact > 500) || (lFungi !== null && lFungi > 500)) {
+                    isRiskLatest = true;
+                    riskPointsCount++;
+                }
+
+                if (lBact !== null || lFungi !== null) {
+                    latestRiskData.push({
+                        location: location,
+                        bact: lBact || 0,
+                        fungi: lFungi || 0,
+                        maxVal: Math.max(lBact || 0, lFungi || 0)
+                    });
+                }
+            });
+
+            // อัปเดต UI Table & KPIs
+            let theadHtml = '<tr><th style="width: 25%;">จุดตรวจ/พื้นที่</th>';
+            for (let i = 1; i < headers.length; i++) {
+                theadHtml += `<th class="text-center">${headers[i]}</th>`;
+            }
+            theadHtml += '</tr>';
+            
+            document.getElementById('tableHead').innerHTML = theadHtml;
             document.getElementById('tableBody').innerHTML = tbodyHtml;
-            document.getElementById('kpi-total').innerText = totalPoints;
-            document.getElementById('kpi-fail').innerText = failPoints;
-            document.getElementById('kpi-pass').innerText = totalPoints - failPoints;
+            document.getElementById('kpi-total-points').innerText = totalPoints;
+            document.getElementById('kpi-risk-points').innerText = riskPointsCount;
 
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard-content').style.display = 'block';
 
-            // สร้างกราฟแท่ง
-            const ctx = document.getElementById('latestChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
+            // 3. สร้างกราฟ Trend (ค่าเฉลี่ย)
+            let avgBact = trendDataBact.map((sum, i) => validCountsBact[i] ? Math.round(sum / validCountsBact[i]) : 0);
+            let avgFungi = trendDataFungi.map((sum, i) => validCountsFungi[i] ? Math.round(sum / validCountsFungi[i]) : 0);
+
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            new Chart(ctxTrend, {
+                type: 'line',
                 data: {
-                    labels: chartLabels,
+                    labels: periods,
                     datasets: [
                         {
-                            label: latestBactHeader,
-                            backgroundColor: '#3498db',
-                            data: chartDataBact
+                            label: 'แบคทีเรียเฉลี่ย (cfu)',
+                            data: avgBact,
+                            borderColor: '#0f4c81',
+                            backgroundColor: 'rgba(15, 76, 129, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
                         },
                         {
-                            label: latestFungiHeader,
-                            backgroundColor: '#e74c3c',
-                            data: chartDataFungi
+                            label: 'เชื้อราเฉลี่ย (cfu)',
+                            data: avgFungi,
+                            borderColor: '#e53e3e',
+                            backgroundColor: 'rgba(229, 62, 62, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
                         }
                     ]
                 },
@@ -275,11 +383,51 @@
                         tooltip: { mode: 'index', intersect: false }
                     },
                     scales: {
-                        y: {
+                        y: { 
                             beginAtZero: true,
-                            grid: { borderDash: [2, 2] }
+                            title: { display: true, text: 'ค่าเฉลี่ย cfu' }
+                        }
+                    }
+                }
+            });
+
+            // 4. สร้างกราฟ Risk Area (Top 5 รอบล่าสุด)
+            // จัดเรียงตามค่า Max ของแบคทีเรียหรือเชื้อราในพื้นที่นั้นๆ เพื่อหาความเสี่ยงสูงสุด
+            latestRiskData.sort((a, b) => b.maxVal - a.maxVal);
+            let top5 = latestRiskData.slice(0, 5);
+            
+            const ctxRisk = document.getElementById('riskChart').getContext('2d');
+            new Chart(ctxRisk, {
+                type: 'bar',
+                data: {
+                    labels: top5.map(d => d.location.length > 15 ? d.location.substring(0,15)+'...' : d.location),
+                    datasets: [
+                        {
+                            label: 'แบคทีเรีย',
+                            data: top5.map(d => d.bact),
+                            backgroundColor: '#2b6cb0'
                         },
+                        {
+                            label: 'เชื้อรา',
+                            data: top5.map(d => d.fungi),
+                            backgroundColor: '#c53030'
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y', // กราฟแนวนอนให้อ่านชื่อห้องง่าย
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
                         x: {
+                            beginAtZero: true,
+                            grid: { borderDash: [2, 2] },
+                            title: { display: true, text: 'cfu' }
+                        },
+                        y: {
                             grid: { display: false }
                         }
                     }
