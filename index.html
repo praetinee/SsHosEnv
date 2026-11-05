@@ -235,7 +235,8 @@ tbody tr:hover td:first-child{background:#f8fbfb}
 <script>
 const sheetId = "1-soxAJSeGzMUt7m-oaELwV24InbvpsTZ0-0nYcMQb1s";
 const sheetName = "ชีต1";
-const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+/* แก้ไข URL ดึงข้อมูลเป็น export ดิบ เพื่อป้องกันปัญหา Google Sheets เดาชนิดข้อมูลผิดพลาดจนจุดตรวจหาย */
+const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
 const LIMIT = 500;
 const REFRESH_INTERVAL = 5 * 60 * 1000;
 
