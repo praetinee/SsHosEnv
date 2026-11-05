@@ -463,19 +463,6 @@ function evaluate(row, period) {
  return {bact,fungi,hasData,bactFail,fungiFail,fail:bactFail||fungiFail};
 }
 
-// ฟังก์ชันวิเคราะห์สาเหตุเบื้องต้น (Root Cause Predictor)
-function analyzeRootCause(bact, fungi, limit = 500) {
-    let causes = [];
-    if (bact > limit && fungi <= limit) {
-        causes.push("🦠 <b>แบคทีเรียสูง:</b> มักเกิดจากกิจกรรมของมนุษย์ ความหนาแน่นของผู้ปฏิบัติงาน หรือการทำความสะอาด (Disinfection) พื้นผิวสัมผัสไม่เพียงพอ");
-    } else if (fungi > limit && (bact === null || bact <= limit)) {
-        causes.push("🍄 <b>เชื้อราสูง:</b> สัมพันธ์กับความชื้นสะสม ท่อน้ำทิ้ง ระบบปรับอากาศ (HVAC) อับชื้น หรือแผ่นกรองอากาศ (Filter) อุดตัน/เสื่อมสภาพ");
-    } else if (bact > limit && fungi > limit) {
-        causes.push("⚠️ <b>สูงทั้ง 2 ชนิด:</b> บ่งชี้ปัญหาการระบายอากาศ (Ventilation) ไม่หมุนเวียน หรือสุขาภิบาลพื้นที่ล้มเหลว ควรตรวจสอบทิศทางลมเย็นและทำ Big Cleaning ด่วน");
-    }
-    return causes.join('<br>');
-}
-
 function render() {
  const rows=currentRows(), ps=selectedPeriods(), latest=getLatestPeriod(ps);
  $('periodCaption').textContent = latest ? `รอบข้อมูลล่าสุดที่มีผลตรวจ: ${latest}` : 'ไม่พบข้อมูลในช่วงเวลาที่เลือก';
@@ -498,14 +485,57 @@ function render() {
  $('kpiRate').textContent=`${rate.toFixed(1)}%`;
  $('kpiPassSub').textContent=`จากพื้นที่ที่มีผลตรวจ ${evaluated.length.toLocaleString('th-TH')} จุด`;
  $('alertCount').textContent=`${fails.length} จุด`;
- $('alertList').innerHTML=fails.length ? fails.map(({row,result})=>{
-  const loc=escapeHTML(row[headers[0]]);
-  const parts=[];
-  if(result.bactFail) parts.push(`แบคทีเรีย <b>${displayCfu(result.bact)}</b>`);
-  if(result.fungiFail) parts.push(`เชื้อรา <b>${displayCfu(result.fungi)}</b>`);
-  const rootCauseHtml = analyzeRootCause(result.bact, result.fungi, LIMIT);
-  return `<div class="alert-item"><div class="alert-top"><span class="alert-place">${loc}</span><span class="tag tag-danger">เกินเกณฑ์</span></div><div class="alert-values">${parts.join('<span>·</span>')}</div><div class="suggestion-box">${rootCauseHtml}</div></div>`;
- }).join('') : '<div class="empty">✓ ไม่พบจุดตรวจที่เกินเกณฑ์ในรอบล่าสุด</div>';
+ 
+ if (!fails.length) {
+     $('alertList').innerHTML = '<div class="empty">✓ ไม่พบจุดตรวจที่เกินเกณฑ์ในรอบล่าสุด</div>';
+ } else {
+     // 1. เตรียมกล่องสำหรับจัดกลุ่ม
+     const groups = {
+         both: { icon: "⚠️", title: "สูงทั้งแบคทีเรียและเชื้อรา", desc: "ปัญหาการระบายอากาศไม่หมุนเวียน หรือสุขาภิบาลล้มเหลว ควรตรวจสอบแอร์และทำ Big Cleaning", color: "#c44747", bg: "#fff0ef", items: [] },
+         fungi: { icon: "🍄", title: "เชื้อราสูงกว่าเกณฑ์", desc: "สัมพันธ์กับความชื้นสะสม ท่อน้ำทิ้ง ระบบปรับอากาศ (HVAC) อับชื้น หรือฟิลเตอร์ตัน", color: "#a96d16", bg: "#fff6e7", items: [] },
+         bact: { icon: "🦠", title: "แบคทีเรียสูงกว่าเกณฑ์", desc: "มักเกิดจากกิจกรรมของมนุษย์ ความหนาแน่น หรือการทำความสะอาด (Disinfection) ไม่เพียงพอ", color: "#087e82", bg: "#e7f5f3", items: [] }
+     };
+
+     // 2. จัดกลุ่มข้อมูล
+     fails.forEach(({row, result}) => {
+         const loc = escapeHTML(row[headers[0]]);
+         const bactText = result.bactFail ? `Bact: ${displayCfu(result.bact)}` : '';
+         const fungiText = result.fungiFail ? `Fungi: ${displayCfu(result.fungi)}` : '';
+         
+         if (result.bactFail && result.fungiFail) {
+             groups.both.items.push({ loc, vals: `<b style="color:var(--red)">${bactText}</b> · <b style="color:var(--red)">${fungiText}</b>` });
+         } else if (result.fungiFail) {
+             groups.fungi.items.push({ loc, vals: `<b style="color:var(--amber)">${fungiText}</b>` });
+         } else if (result.bactFail) {
+             groups.bact.items.push({ loc, vals: `<b style="color:var(--teal)">${bactText}</b>` });
+         }
+     });
+
+     // 3. สร้าง HTML
+     let htmlOutput = '';
+     Object.values(groups).forEach(g => {
+         if (g.items.length > 0) {
+             htmlOutput += `
+             <div class="alert-item" style="border-left: 4px solid ${g.color}; padding: 12px; margin-bottom: 10px;">
+                 <div style="font-weight: 700; color: var(--navy); font-size: 13.5px; display:flex; align-items:center; gap:6px;">
+                     ${g.icon} ${g.title} <span class="tag tag-danger" style="background:${g.bg}; color:${g.color}; margin-left:auto;">${g.items.length} จุด</span>
+                 </div>
+                 <div style="font-size: 11px; color: var(--muted); margin: 4px 0 10px 0; line-height: 1.4;">
+                     💡 <b>คำแนะนำ:</b> ${g.desc}
+                 </div>
+                 <div style="display:flex; flex-direction:column; gap:6px; border-top: 1px dashed var(--line); padding-top: 10px;">
+                     ${g.items.map(item => `
+                         <div style="display:flex; justify-content:space-between; align-items:center; font-size: 12px;">
+                             <span style="font-weight: 600;">${item.loc}</span>
+                             <span style="font-size: 11px;">${item.vals}</span>
+                         </div>
+                     `).join('')}
+                 </div>
+             </div>`;
+         }
+     });
+     $('alertList').innerHTML = htmlOutput;
+ }
  renderMatrix(rows,ps);
 }
 function renderMatrix(rows,ps) {
